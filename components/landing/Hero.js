@@ -22,7 +22,11 @@ export default function Hero() {
               Try it with your questionnaire
               <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
-            <EarlyAccessButton variant="outline" label="Join early access" />
+            <Link href="/demo" className="group inline-flex items-center justify-center rounded-md border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-50 transition">
+              See it in action
+              <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5 text-neutral-500" aria-hidden="true" />
+            </Link>
+            <EarlyAccessButton variant="ghost" label="Join early access" />
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-neutral-500">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" /> Human review on every draft</span>

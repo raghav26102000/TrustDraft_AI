@@ -1,0 +1,53 @@
+{
+  "questionnaire_name": "Acme_Corp_SecurityQuestionnaire_2025.xlsx",
+  "questions": [
+    {
+      "question": "Do you encrypt data at rest and in transit?",
+      "answer": "Yes. All production data is encrypted at rest using AES-256. Data in transit is encrypted via TLS 1.2+ across all customer-facing endpoints.",
+      "source_doc": "SOC 2 Type II Report, §3.2",
+      "status": "matched"
+    },
+    {
+      "question": "Describe your incident response process, including detection and notification timelines.",
+      "answer": "We maintain a documented incident response plan (IR Playbook v4) with 24/7 on-call coverage and a 15-minute acknowledgment SLA for P1 incidents. Customers are notified within 72 hours of a confirmed breach affecting their data, per our DPA.",
+      "source_doc": "IR Playbook v4 / Data Processing Agreement",
+      "status": "matched"
+    },
+    {
+      "question": "Do you have a vulnerability disclosure or bug bounty program?",
+      "answer": "Yes. We operate a responsible disclosure program via security@[company].com, with triage within one business day and a defined severity-based remediation timeline.",
+      "source_doc": "Security Policy, Vulnerability Disclosure section",
+      "status": "matched"
+    },
+    {
+      "question": "List all sub-processors that handle customer data, including their location.",
+      "answer": "Current sub-processors: AWS (us-east-1, primary hosting), Stripe (payment processing), Resend (transactional email). Full and up-to-date list maintained at our public trust page.",
+      "source_doc": "Sub-processor Registry / Trust Page",
+      "status": "matched"
+    },
+    {
+      "question": "Do you perform regular penetration testing or third-party security audits?",
+      "answer": "We engage a third-party firm for annual penetration testing, with the most recent test completed in Q1 2025. A summary report is available under NDA.",
+      "source_doc": "Pentest Summary Report, Q1 2025",
+      "status": "needs_review"
+    },
+    {
+      "question": "How do you handle data deletion requests, and within what timeframe?",
+      "answer": "Customer data is deleted within 30 days of a verified deletion request, in accordance with our DPA and applicable data protection regulations. Backups are purged on a rolling 90-day cycle.",
+      "source_doc": "Data Processing Agreement, §7",
+      "status": "matched"
+    },
+    {
+      "question": "Do you maintain a formal employee security awareness training program?",
+      "answer": "All employees complete security awareness training during onboarding and annually thereafter, covering phishing, data handling, and incident reporting.",
+      "source_doc": "Security Policy, Training section",
+      "status": "matched"
+    },
+    {
+      "question": "What is your policy on multi-factor authentication for internal systems and customer accounts?",
+      "answer": "MFA is enforced for all internal systems with access to production data. Customer-facing MFA is available and recommended but not currently enforced by default — this is on our roadmap for Q3 2025.",
+      "source_doc": "Internal Access Policy / Product Roadmap",
+      "status": "needs_review"
+    }
+  ]
+}

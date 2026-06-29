@@ -10,8 +10,9 @@ export default function Nav() {
           <span className="font-semibold tracking-tight text-neutral-900">TrustDraft_AI</span>
         </Link>
         <nav className="hidden sm:flex items-center gap-6 text-sm text-neutral-600">
-          <a href="#how-it-works" className="hover:text-neutral-900 transition">How it works</a>
-          <a href="#faq" className="hover:text-neutral-900 transition">FAQ</a>
+          <Link href="/demo" className="hover:text-neutral-900 transition">See it in action</Link>
+          <a href="/#how-it-works" className="hover:text-neutral-900 transition">How it works</a>
+          <a href="/#faq" className="hover:text-neutral-900 transition">FAQ</a>
         </nav>
         <div className="flex items-center gap-2">
           <EarlyAccessButton variant="ghost" label="Early access" />

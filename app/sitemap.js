@@ -4,6 +4,7 @@ export default function sitemap() {
   const now = new Date()
   return [
     { url: `${BASE}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
+    { url: `${BASE}/demo`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE}/upload`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/thank-you`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
   ]
