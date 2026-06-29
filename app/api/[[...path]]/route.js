@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'crypto'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { getDb } from '@/lib/server/db'
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
 
 function cors(res) {
   res.headers.set('Access-Control-Allow-Origin', process.env.CORS_ORIGINS || '*')
-  res.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.headers.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   return res
 }
@@ -41,7 +41,7 @@ async function persistFile(file, kind, submissionId) {
   await fs.mkdir(subDir, { recursive: true })
   const ext = path.extname(file.name).toLowerCase()
   const safeBase = path.basename(file.name, ext).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
-  const stored = `${kind}-${uuidv4()}-${safeBase}${ext}`
+  const stored = `${kind}-${randomUUID()}-${safeBase}${ext}`
   const full = path.join(subDir, stored)
   const bytes = Buffer.from(await file.arrayBuffer())
   await fs.writeFile(full, bytes)
@@ -86,7 +86,7 @@ async function handleRoute(request, { params }) {
       }
       const db = await getDb()
       const doc = {
-        id: uuidv4(),
+        id: randomUUID(),
         email,
         source,
         ip,
@@ -137,7 +137,7 @@ async function handleRoute(request, { params }) {
         return cors(NextResponse.json({ error: 'Total upload too large.' }, { status: 413 }))
       }
 
-      const submissionId = uuidv4()
+      const submissionId = randomUUID()
       const files = []
       files.push(await persistFile(questionnaire, 'questionnaire', submissionId))
       for (const f of supporting) {
@@ -181,6 +181,55 @@ async function handleRoute(request, { params }) {
         mime: f.mime,
       }))
       return cors(NextResponse.json(safe))
+    }
+
+    // DELETE /api/submissions/:id  — token-gated permanent deletion
+    if (parts.length === 2 && parts[0] === 'submissions' && method === 'DELETE') {
+      const id = parts[1]
+      const url = new URL(request.url)
+      const token = url.searchParams.get('token') || ''
+      const expected = process.env.ADMIN_TOKEN || ''
+      if (!expected || token !== expected) {
+        return cors(NextResponse.json({ error: 'unauthorized' }, { status: 401 }))
+      }
+      const db = await getDb()
+      const sub = await db.collection('submissions').findOne({ id })
+      if (!sub) return cors(NextResponse.json({ error: 'not found' }, { status: 404 }))
+
+      // 1. delete chunks/embeddings
+      let chunksDeleted = 0
+      try {
+        const r = await db.collection('chunks').deleteMany({ submission_id: id })
+        chunksDeleted = r.deletedCount || 0
+      } catch (e) {
+        console.error(`[delete ${id}] chunk delete failed:`, e?.message || e)
+      }
+
+      // 2. delete uploaded files on disk (the whole submission directory)
+      let filesDeleted = 0
+      try {
+        const baseDir = process.env.UPLOAD_DIR || '/app/uploads'
+        const subDir = path.join(baseDir, id)
+        // resolve and verify path stays inside UPLOAD_DIR to prevent traversal
+        const resolved = path.resolve(subDir)
+        const resolvedBase = path.resolve(baseDir)
+        if (resolved.startsWith(resolvedBase + path.sep)) {
+          const stat = await fs.stat(resolved).catch(() => null)
+          if (stat?.isDirectory()) {
+            const entries = await fs.readdir(resolved)
+            filesDeleted = entries.length
+            await fs.rm(resolved, { recursive: true, force: true })
+          }
+        }
+      } catch (e) {
+        console.error(`[delete ${id}] file delete failed:`, e?.message || e)
+      }
+
+      // 3. delete the submission record itself
+      await db.collection('submissions').deleteOne({ id })
+
+      console.log(`[delete ${id}] removed submission · chunks=${chunksDeleted} files=${filesDeleted}`)
+      return cors(NextResponse.json({ ok: true, id, chunks_deleted: chunksDeleted, files_deleted: filesDeleted }))
     }
 
     // GET /api/submissions/:id/export?format=xlsx|docx

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '@/lib/server/db'
+import DeleteSubmissionButton from '@/components/admin/DeleteSubmissionButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +51,7 @@ async function loadSubmissions() {
         updated_at: 1,
         files: 1,
         summary: 1,
+        usage: 1,
       },
     })
     .sort({ created_at: -1 })
@@ -109,7 +111,9 @@ export default async function AdminPage({ searchParams }) {
                   <th className="px-4 py-3 font-medium">Questionnaire</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Summary</th>
+                  <th className="px-4 py-3 font-medium">Usage</th>
                   <th className="px-4 py-3 font-medium">Submitted</th>
+                  <th className="px-4 py-3 font-medium sr-only">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 bg-white">
@@ -118,6 +122,10 @@ export default async function AdminPage({ searchParams }) {
                   const summary = s.summary
                     ? `${s.summary.matched}/${s.summary.total} matched · ${s.summary.needs_review} review`
                     : s.stage || '—'
+                  const u = s.usage
+                  const usageStr = u
+                    ? `${u.llmCalls ?? 0} LLM · ${u.embeddingCalls ?? 0} emb · ~${(u.estTokens ?? 0).toLocaleString('en-US')} tok`
+                    : '—'
                   return (
                     <tr key={s.id} className="hover:bg-neutral-50">
                       <td className="px-4 py-3 font-medium text-neutral-900">
@@ -130,7 +138,11 @@ export default async function AdminPage({ searchParams }) {
                       <td className="px-4 py-3 font-mono text-xs text-neutral-600 truncate max-w-[220px]">{qFile}</td>
                       <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                       <td className="px-4 py-3 text-neutral-600">{summary}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500 whitespace-nowrap">{usageStr}</td>
                       <td className="px-4 py-3 text-neutral-500 whitespace-nowrap">{fmtDate(s.created_at)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <DeleteSubmissionButton id={s.id} company={s.company} token={token} />
+                      </td>
                     </tr>
                   )
                 })}
