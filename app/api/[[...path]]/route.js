@@ -11,6 +11,9 @@ import {
   MAX_FILE_BYTES,
 } from '@/lib/server/validation'
 import { notifySubmission } from '@/lib/server/notify'
+import { runPipelineAsync } from '@/lib/ai/pipeline'
+import { activeProviderInfo } from '@/lib/ai/generateAnswer'
+import { buildXlsxBuffer, buildDocxBuffer } from '@/lib/ai/export'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -157,7 +160,69 @@ async function handleRoute(request, { params }) {
       await db.collection('submissions').insertOne(submission)
       await notifySubmission(submission)
 
+      // Kick off the AI pipeline async \u2014 the user is already redirected to /thank-you.
+      runPipelineAsync(submissionId)
+
       return cors(NextResponse.json({ ok: true, id: submissionId }))
+    }
+
+    // GET /api/submissions/:id  \u2014 results for the review page
+    if (parts.length === 2 && parts[0] === 'submissions' && method === 'GET') {
+      const id = parts[1]
+      const db = await getDb()
+      const sub = await db.collection('submissions').findOne({ id })
+      if (!sub) return cors(NextResponse.json({ error: 'not found' }, { status: 404 }))
+      const { _id, ip, ...safe } = sub
+      // Hide internal absolute paths from the public response.
+      safe.files = (safe.files || []).map((f) => ({
+        kind: f.kind,
+        original_name: f.original_name,
+        size: f.size,
+        mime: f.mime,
+      }))
+      return cors(NextResponse.json(safe))
+    }
+
+    // GET /api/submissions/:id/export?format=xlsx|docx
+    if (parts.length === 3 && parts[0] === 'submissions' && parts[2] === 'export' && method === 'GET') {
+      const id = parts[1]
+      const url = new URL(request.url)
+      const format = (url.searchParams.get('format') || 'xlsx').toLowerCase()
+      const db = await getDb()
+      const sub = await db.collection('submissions').findOne({ id })
+      if (!sub) return cors(NextResponse.json({ error: 'not found' }, { status: 404 }))
+      if (!sub.results || sub.results.length === 0) {
+        return cors(NextResponse.json({ error: 'submission not ready' }, { status: 409 }))
+      }
+      const safeBase = (sub.company || 'submission').toString().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 40)
+      try {
+        if (format === 'docx') {
+          const buf = await buildDocxBuffer(sub)
+          return new NextResponse(buf, {
+            status: 200,
+            headers: {
+              'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'content-disposition': `attachment; filename="TrustDraft_${safeBase}.docx"`,
+            },
+          })
+        }
+        const buf = await buildXlsxBuffer(sub)
+        return new NextResponse(buf, {
+          status: 200,
+          headers: {
+            'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content-disposition': `attachment; filename="TrustDraft_${safeBase}.xlsx"`,
+          },
+        })
+      } catch (err) {
+        console.error('export failed:', err)
+        return cors(NextResponse.json({ error: 'export failed' }, { status: 500 }))
+      }
+    }
+
+    // GET /api/provider  \u2014 inspect active LLM provider
+    if (route === '/provider' && method === 'GET') {
+      return cors(NextResponse.json(activeProviderInfo()))
     }
 
     return cors(NextResponse.json({ error: `Route ${route} not found` }, { status: 404 }))
